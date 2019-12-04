@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}个人详情{% endblock %}
+{% block title %}个人主页{% endblock %}
 {% block css %}/static/styles/pages/profile.css{% endblock %}
 {% block content %}
 <div class="page-main clearfix">
@@ -40,8 +40,8 @@
             </div>
         </header>
         <div class="list-mod">
-            <div class="list clearfix">
-                {% for image in user.images %}
+            <div class="list clearfix js-image-list">
+                {% for image in images %}
                 <a class="item" href="/image/{{ image.id }}">
                     <div class="img-box">
                         <img src="{{ image.url }}">
@@ -54,10 +54,22 @@
                 </a>
                 {% endfor %}
             </div>
-            <div class="more-content">
-                <a class="_oidfu" href="/taylorswift/?max_id=1229190628132188945">更多</a>
+            {# 有下一页才显示更多按钮 #}
+            {% if has_next %}
+            <div class="more-content js-load-more">
+                <a class="_oidfu" href="javascript:void(0);">更多</a>
             </div>
+            {% endif %}
         </div>
     </article>
 </div>
 {% endblock %}
+
+{# 添加js入口 #}
+{% block js %}
+<script type="text/javascript">
+    window.uid = {{user.id}};
+</script>
+<script type="text/javascript" src="/static/js/jquery.js"></script>
+<script type="text/javascript" src="/static/js/profile.js"></script>
+{% endblock%}

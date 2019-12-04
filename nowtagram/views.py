@@ -4,7 +4,7 @@ from nowtagram import app, db
 from flask import render_template, redirect, request, flash, get_flashed_messages
 from nowtagram.models import User, Image
 # 使用md5的加密算法hashlib
-import random, hashlib
+import random, hashlib, json
 from flask_login import login_user, logout_user, login_required, current_user
 
 
@@ -33,7 +33,27 @@ def profile(user_id):
     user = User.query.get(user_id)
     if user == None:
         return redirect('/')
-    return render_template('profile.html', user=user)
+
+    # 分页显示用户的图片
+    paginate = Image.query.filter_by(user_id=user_id).paginate(page=1, per_page=3, error_out=False)
+    return render_template('profile.html', user=user, images=paginate.items, has_next=paginate.has_next)
+
+
+# 分页显示个人详情页的图片，点更多动态加载图片
+@app.route('/profile/images/<int:user_id>/<int:page>/<int:per_page>/')
+def user_images(user_id, page, per_page):
+    paginate = Image.query.filter_by(user_id=user_id).paginate(page=page, per_page=per_page, error_out=False)
+    # 判断是否还有下一页，是否需要显示更多按钮，paginate.has_next参数
+    map = {'has_next': paginate.has_next}
+    # 返回的图片信息也放到map里
+    images = []
+    for image in paginate.items:
+        imgvo = {'id': image.id, 'url': image.url, 'comment_count': len(image.comments)}
+        images.append(imgvo)
+    map['images'] = images
+
+    # 返回json格式的数据，用json.dumps而不是json.dump，然后靠前端处理相应的数据
+    return json.dumps(map)
 
 
 # 注册登录页
