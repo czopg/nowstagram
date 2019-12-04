@@ -1,6 +1,6 @@
 # -*- encoding=UTF-8 -*-
 
-from nowtagram import db
+from nowtagram import db, login_manager
 import random
 from datetime import datetime
 
@@ -12,6 +12,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(80), unique=True)
     password = db.Column(db.String(32))
+    # 加强md5密码 加盐值
+    salt = db.Column(db.String(32))
     # 头像地址
     head_url = db.Column(db.String(256))
     # 一对多，在一的一方定义关系，反向引用，要用backref=db.backref('user')而不是backref='user'
@@ -20,14 +22,34 @@ class User(db.Model):
     # 该用户发的所有评论
     # comments = db.relationship('Comment', backref='user', lazy='dynamic')
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, salt=''):
         self.username = username
         self.password = password
+        self.salt = salt
         # 使用网站提供的随机图片
         self.head_url = 'http://images.nowcoder.com/head/' + str(random.randint(0, 1000)) + 'm.png'
 
     def __repr__(self):
         return '<User: %d %s>' % (self.id, self.username)
+
+    # 用户类需要包含包含以下性质和方法才能使用flask-login
+    # 是否是认证的
+    @property
+    def is_authenticated(self):
+        return True
+
+    # 是否是激活的
+    @property
+    def is_active(self):
+        return True
+
+    # 是否是匿名的
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return self.id
 
 
 # 图像模型
@@ -69,3 +91,9 @@ class Comment(db.Model):
 
     def __repr__(self):
         return '<Comment: %d %s>' % (self.id, self.content)
+
+
+# 回调函数（通过session里的id获取用户信息）
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)

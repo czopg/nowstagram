@@ -1,8 +1,11 @@
 # -*- encoding=UTF-8 -*-
 
-from nowtagram import app
-from flask import render_template, redirect
+from nowtagram import app, db
+from flask import render_template, redirect, request, flash, get_flashed_messages
 from nowtagram.models import User, Image
+# 使用md5的加密算法hashlib
+import random, hashlib
+from flask_login import login_user, logout_user, login_required, current_user
 
 
 # 首页
@@ -25,8 +28,108 @@ def image(image_id):
 
 # 个人详情页
 @app.route('/profile/<int:user_id>')
+@login_required     # 只有登录才能查看
 def profile(user_id):
     user = User.query.get(user_id)
     if user == None:
         return redirect('/')
     return render_template('profile.html', user=user)
+
+
+# 注册登录页
+@app.route('/regloginpage/')
+def regloginpage():
+    msg = ''
+    # 只收集来自登录注册的闪现信息
+    for m in get_flashed_messages(with_categories=False, category_filter='reglogin'):
+        msg += m
+
+    # 当用户试图访问某个页面或评论某个页面时，我们会要求其先登录，然后在用户在登录后自动跳转
+    # 到用户试图访问的页面，即实现用户在登录后跳转回前一页，可添加next参数实现跳转
+    return render_template('login.html', msg=msg, next=request.values.get('next'))
+
+
+# 因为要闪现很多信息，需包装成函数
+def redirect_with_msg(target, msg, category):
+    if msg != None:
+        # category指信息来自哪里
+        flash(msg, category=category)
+    return redirect(target)
+
+
+# 注册接口，点注册按钮需要判断会发生什么
+@app.route('/reg/', methods=['GET', 'POST'])
+def reg():
+    # request.args是url里的值，request.form是body里的值
+    username = request.values.get('username').strip()
+    password = request.values.get('password').strip()
+
+    if username == '' or password == '':
+        return redirect_with_msg('/regloginpage/', '用户名或密码不能为空', category='reglogin')
+
+    user = User.query.filter_by(username=username).first()
+    if user != None:
+        return redirect_with_msg('/regloginpage/', '用户名已存在', category='reglogin')
+
+    # 更多判断
+
+    # 为md5密码加盐
+    salt = '.'.join(random.sample('0123456789abcdefghiABCDEFGHI', 10))
+    m = hashlib.md5()
+    # python3下字符串为Unicode类型，而hash传递时需要的是utf-8类型，因此，需要类型转换
+    m.update((password+salt).encode('utf8'))
+    # md5加密出来的十六进制字符串
+    password = m.hexdigest()
+
+    user = User(username, password, salt)
+    db.session.add(user)
+    db.session.commit()
+
+    # 登录用户
+    login_user(user)
+
+    next = request.values.get('next')
+    if next != None and next.startswith('/'):
+        return redirect(next)
+
+    return redirect('/')
+
+
+# 登录接口，点登录按钮需要判断会发生什么
+@app.route('/login/', methods=['GET', 'POST'])
+def login():
+    username = request.values.get('username').strip()
+    password = request.values.get('password').strip()
+
+    if username == '' or password == '':
+        return redirect_with_msg('/regloginpage/', '用户名或密码不能为空', category='reglogin')
+
+    user = User.query.filter_by(username=username).first()
+    if user == None:
+        return redirect_with_msg('/regloginpage/', '用户不存在', category='reglogin')
+
+    m = hashlib.md5()
+    m.update((password + user.salt).encode('utf8'))
+    if m.hexdigest() != user.password:
+        return redirect_with_msg('/regloginpage/', '密码错误', category='reglogin')
+
+    login_user(user)
+
+    # 需要经由login.html的表单form提交再在此处获取，因为login链接本来就是在表单form跳转到这的
+    next = request.values.get('next')
+    if next != None and next.startswith('/'):
+        return redirect(next)
+
+    return redirect('/')
+
+
+# 登出
+@app.route('/logout/')
+def logout():
+    logout_user()
+    return redirect('/')
+
+
+
+
+

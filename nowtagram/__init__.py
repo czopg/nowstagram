@@ -3,6 +3,7 @@
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
 
 # 出现了flask TemplateNotFound这个问题，原因在于Flask这个对象一个项目中只能创建一个，
 # 我们把它放到了一个__init__.py文件中,创建的时候，没有template_folder这个属性，所以默认是templates
@@ -16,7 +17,14 @@ app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 # 导入配置文件
 app.config.from_pyfile('app.conf')
 
+app.secret_key = 'nowcoder'
+
 db = SQLAlchemy(app)
+
+# 初始化
+login_manager = LoginManager(app)
+# 没登录自动跳转
+login_manager.login_view = '/regloginpage/'
 
 # 这句需要加，否则出现页面404 not found；需要加在db语句的后面，因为models模块也加载了db，而加载两次db会报错
 from nowtagram import models, views

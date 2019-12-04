@@ -22,11 +22,11 @@ def init_database():
     # 增
     for i in range(1, 101):
         db.session.add(User('User' + str(i), 'pw' + str(i)))
-        for j in range(1, 4):
+        for j in range(1, 11):
             db.session.add(Image(get_image_url(), i))     # id是从1开始的
             for k in range(1, 4):
                 # id数值一定要正确对应设置，否则报错外键设置不对应
-                db.session.add(Comment('This is comment ' + str(k), 3*(i-1)+j, i))
+                db.session.add(Comment('This is comment ' + str(k), 10*(i-1)+j, i))
     db.session.commit()
 
     # 改
