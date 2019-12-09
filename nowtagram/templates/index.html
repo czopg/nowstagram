@@ -2,7 +2,7 @@
 {% block title %}首页-{{ current_user.username }}{% endblock %}
 {% block css %}/static/styles/pages/index.css{% endblock %}
 {% block content %}
-<div class="page-main clearfix">
+<div class="page-main clearfix js-image-list">
     {% for image in images %}
     <article class="mod">
         <header class="mod-hd">
@@ -74,5 +74,21 @@
         </div>
     </article>
     {% endfor %}
+
+    {% if has_next %}
+    <div class="more-content js-load-more">
+        <a class="_oidfu" href="javascript:void(0);">更多</a>
+    </div>
+    {% endif %}
 </div>
+
+{% endblock %}
+
+{# 取第一张图片的id作为window.uid #}
+{% block js %}
+<script type="text/javascript">
+    window.uid = {{ (images | random).id }};
+</script>
+<script type="text/javascript" src="/static/js/jquery.js"></script>
+<script type="text/javascript" src="/static/js/index.js"></script>
 {% endblock %}
