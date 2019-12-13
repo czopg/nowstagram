@@ -14,7 +14,7 @@
                         {% if (msg | length) > 0 %}
                             <b>{{ msg }}</b>
                         {% else %}
-                            注册 牛客
+                            注册 Sharepics
                         {% endif %}
                     </h2>
                     <div class="form-item">
@@ -22,6 +22,10 @@
                     </div>
                     <div class="form-item">
                         <input class="input-txt" aria-describedby="" aria-label="密码" aria-required="true" autocapitalize="off" autocorrect="off" name="password" placeholder="密码" type="password" value="" data-reactid=".0.1.0.1.0.1.0.6.0">
+                    </div>
+
+                    <div class="form-item">
+                        <input class="input-txt" aria-label="邮箱" aria-required="true" autocapitalize="off" autocorrect="off" name="register e-mail" placeholder="邮箱" type="email" value="" data-reactid=".0.1.0.1.0.1.0.7.0">
                     </div>
 
                     <input type="hidden" name="next" value="{{ next }}"/>

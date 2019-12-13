@@ -1,11 +1,12 @@
 # -*- encoding=UTF-8 -*-
 
 from nowtagram import app, db
-from flask import render_template, redirect, request, flash, get_flashed_messages
-from nowtagram.models import User, Image
+from flask import render_template, redirect, request, flash, get_flashed_messages, send_from_directory
+from nowtagram.models import User, Image, Comment
 # 使用md5的加密算法hashlib
-import random, hashlib, json
+import random, hashlib, json, uuid, os
 from flask_login import login_user, logout_user, login_required, current_user
+from nowtagram.qiniusdk import qiniu_upload_file
 
 
 # 首页
@@ -15,21 +16,36 @@ def index():
     # return render_template('index.html', images=images)
 
     # 实现主页的AJAX分页显示
-    paginate = Image.query.paginate(page=1, per_page=10, error_out=False)
+    paginate = Image.query.order_by(db.desc(Image.id)).paginate(page=1, per_page=10, error_out=False)
     return render_template('index.html', images=paginate.items, has_next=paginate.has_next)
 
 
 # 分页显示主页的图片，点更多动态加载图片
 @app.route('/index/images/<int:page>/<int:per_page>/')
 def index_images(page, per_page):
-    paginate = Image.query.paginate(page=page, per_page=per_page, error_out=False)
+    paginate = Image.query.order_by(db.desc(Image.id)).paginate(page=page, per_page=per_page, error_out=False)
     v_map = {'has_next': paginate.has_next}
     images = []
+    # 主页json格式如何处理？传入的这3个变量是如何处理的？
     for image in paginate.items:
-        # 主页json格式如何处理？传入的这3个变量是如何处理的？
-        imgvo = {'ct_date': image.created_date, 'id': image.id, 'url': image.url, 'comment_count': len(image.comments),
-                 'comments': image.comments, 'u_id': image.user.id, 'u_head_url': image.user.head_url,
-                 'u_username': image.user.username}
+        # comments = []
+        # # 循环添加完评论的内容
+        # for i in range(0, min(2, len(image.comments))):
+        #     comment = image.comments[i]
+        #     comments.append({'username': comment.user.username, 'id': comment.user_id, 'content': comment.content})
+        comment_username = []
+        comment_uid = []
+        comment_content = []
+        for c_i in image.comments:
+            comment_username.append(c_i.user.username)
+            comment_uid.append(c_i.user.id)
+            comment_content.append(c_i.content)
+
+        # 日期：字符串类型，分别加上以上三个评论相关变量
+        imgvo = {'created_date': str(image.created_date), 'id': image.id, 'url': image.url,
+                 'comment_count': len(image.comments), 'user_id': image.user_id, 'head_url': image.user.head_url,
+                 'username': image.user.username, 'comment_username': comment_username, 'comment_uid': comment_uid,
+                 'comment_content': comment_content}
         images.append(imgvo)
     v_map['images'] = images
     return json.dumps(v_map)
@@ -38,13 +54,17 @@ def index_images(page, per_page):
 # 图片详情页
 # static忘记了一个/号，弄得一直加载CSS出现404...
 @app.route('/image/<int:image_id>/')
+@login_required
 def image(image_id):
     # 由index里查询的图片id来查找相应的图片
     v_image = Image.query.get(image_id)
     # 用is代替==
     if v_image is None:
         return redirect('/')
-    return render_template('pageDetail.html', image=v_image)
+
+    # 倒序显示评论,
+    comments = Comment.query.filter_by(image_id=image_id).order_by(db.desc(Comment.id)).limit(20).all()
+    return render_template('pageDetail.html', image=v_image, comments=comments)
 
 
 # 个人详情页
@@ -108,7 +128,9 @@ def reg():
     if username == '' or password == '':
         return redirect_with_msg('/regloginpage/', '用户名或密码不能为空', category='reglogin')
 
+    # 登录注册中文名时提示这句出错
     user = User.query.filter_by(username=username).first()
+
     if user is not None:
         return redirect_with_msg('/regloginpage/', '用户名已存在', category='reglogin')
 
@@ -169,3 +191,76 @@ def login():
 def logout():
     logout_user()
     return redirect('/')
+
+
+def save_to_qiniu(file, file_name):
+    return qiniu_upload_file(file, file_name)
+
+
+# 上传保存，返回相关url
+def save_to_local(file, filename):
+    # 保存目录
+    save_dir = app.config['UPLOAD_DIR']
+    # file里有save属性可以保存文件，os.path.join
+    file.save(os.path.join(save_dir, filename))
+    return '/image/' + filename
+
+
+# 图片上传
+@app.route('/upload/', methods=['POST'])
+@login_required
+def upload():
+    # print(request.files)
+    # 调用request.files[名字]，流返回字节
+    file = request.files['file']
+
+    # 可见file里有很多HTTP头的属性
+    # print(dir(file))
+
+    # 文件的后缀匹配
+    file_ext = ''
+    if file.filename.find('.') > 0:
+        # 分隔符查找最后一个.符号后的后缀，去掉空格，小写匹配
+        file_ext = file.filename.rsplit('.', 1)[1].strip().lower()
+
+    # 通过uuid生成唯一文件名，并且去除不合法字符，并且通过文件后缀名限制文件类型
+    if file_ext in app.config['ALLOWED_EXT']:
+        # 重命名文件名，因为用户上传的文件名可能包含html标签之类的，普遍做法是过滤掉不符合的词语
+        # 演示用uuid生成随机文件名，uuid是通用唯一识别码,包含-
+        file_name = str(uuid.uuid1()).replace('-', '') + '.' + file_ext
+
+        # 保存文件到服务器
+        # url = save_to_local(file, file_name)
+        url = qiniu_upload_file(file, file_name)
+
+        if url is not None:
+            db.session.add(Image(url, current_user.id))
+            db.session.commit()
+
+    return redirect('/profile/%d' % current_user.id)
+
+
+# 图片下载显示
+@app.route('/image/<image_name>')
+def view_image(image_name):
+    # flask里带有此类api，send_from_directory
+    return send_from_directory(app.config['UPLOAD_DIR'], image_name)
+
+
+# 图片详情页增加评论
+@app.route('/addcomment/', methods=['POST'])
+@login_required
+def add_comment():
+    # 类型转换，返回的可能是字符串
+    image_id = int(request.values['image_id'])
+    # print(request.values)
+    content = request.values['content']
+    comment = Comment(content, image_id, current_user.id)
+    db.session.add(comment)
+    db.session.commit()
+
+    return json.dumps({'code': 0, 'id': comment.id, 'content': content,
+                       'username': comment.user.username, 'user_id': comment.user_id})
+
+
+# 首页评论功能实现

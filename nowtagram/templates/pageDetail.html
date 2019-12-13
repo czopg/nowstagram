@@ -5,7 +5,7 @@
 <div class="page-main clearfix">
     <article>
         <div class="pic-wrapper">
-            <img src="{{ image.url }}">
+            <img src="{{ image.url }}?imageView/1/w/600/h/600">
         </div>
         <div class="pic-discuss">
             <header class="discuss-hd">
@@ -29,7 +29,7 @@
                 </div>
             </section>
             -->
-            <ul class="discuss-list">
+            <ul class="discuss-list js-discuss-list">
                 <!--
                 <li>
                     <h1>
@@ -46,13 +46,14 @@
                     </span>
                 </li>
                 -->
-                {% for comment in image.comments %}
+                {% for comment in comments %}
                     {% if loop.index > 10 %}
                         {% break %}
                     {% endif %}
                 <li>
-                    <a class=" icon-remove" title="删除评论"></a>
-                    <a class="_4zhc5 _iqaka" title="{{ comment.user.username }}" href="/profile/{{ comment.user.id }}" data-reactid=".0.1.0.0.0.2.1.2:$comment-17856951190001917.1">{{ comment.user.username }}</a>
+                    <!--<a class=" icon-remove" title="删除评论"></a>-->
+                    {# data-reactid=".0.1.0.0.0.2.1.2:$comment-17856951190001917.1" #}
+                    <a class="_4zhc5 _iqaka" title="{{ comment.user.username }}" href="/profile/{{ comment.user.id }}">{{ comment.user.username }}</a>
                     <span>
                         <span>{{ comment.content }}</span>
                     </span>
@@ -61,12 +62,20 @@
             </ul>
             <section class="discuss-edit">
                 <a class="icon-heart-empty"></a>
+                {# 添加js属性id #}
                 <form>
-                    <input placeholder="添加评论..." type="text">
+                    <input placeholder="添加评论..." id="jsCmt" type="text">
                 </form>
-                <button class="more-info">更多选项</button>
+                <button class="more-info" id="jsSubmit">提交评论</button>
             </section>
         </div>
     </article>
 </div>
+{% endblock %}
+{% block js %}
+<script type="text/javascript">
+    window.imageId ={{image.id}};
+</script>
+<script type="text/javascript" src="/static/js/jquery.js"></script>
+<script type="text/javascript" src="/static/js/detail.js"></script>
 {% endblock %}
