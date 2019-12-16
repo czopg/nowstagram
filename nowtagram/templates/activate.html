@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sharepics 帐号激活</title>
+</head>
+<body>
+<h3>亲爱的 {{ username }} 用户，你好！欢迎来到 Sharepics！</h3>
+{#<p>激活请点击右边链接，<a href="/activate/{{ token }}/">激活</a></p>#}
+<h3>
+    <p>请点击右边的激活按钮激活你的账号：<a href="{{ url_for('activate', token=token, _external=True) }}">激活</a></p>
+</h3>
+</body>
+</html>

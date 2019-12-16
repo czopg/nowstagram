@@ -3,6 +3,8 @@
 from nowtagram import db, login_manager
 import random
 from datetime import datetime
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from flask import current_app
 
 
 # 用户模型，不定义表名则默认为类名的小写
@@ -22,9 +24,14 @@ class User(db.Model):
     # 该用户发的所有评论
     # comments = db.relationship('Comment', backref='user', lazy='dynamic')
 
-    def __init__(self, username, password, salt=''):
+    email = db.Column(db.String(64))
+    # 是否激活
+    status = db.Column(db.Boolean)
+
+    def __init__(self, username, password, email='', salt=''):
         self.username = username
         self.password = password
+        self.email = email
         self.salt = salt
         # 使用网站提供的随机图片
         self.head_url = 'http://images.nowcoder.com/head/' + str(random.randint(0, 1000)) + 'm.png'
@@ -32,24 +39,49 @@ class User(db.Model):
     def __repr__(self):
         return '<User: %d %s>' % (self.id, self.username)
 
+    # Flask-Login提供了UserMixin类，你只要继承这个类就行，它提供了对这些方法的默认实现
     # 用户类需要包含包含以下性质和方法才能使用flask-login
-    # 是否是认证的
-    @property
-    def is_authenticated(self):
+    @property   # 把方法当成属性使用
+    def is_authenticated(self):     # 是否是认证的
         return True
 
-    # 是否是激活的
     @property
-    def is_active(self):
+    def is_active(self):    # 是否是激活的
         return True
 
-    # 是否是匿名的
     @property
-    def is_anonymous(self):
+    def is_anonymous(self):     # 是否是匿名的
         return False
 
     def get_id(self):
         return self.id
+
+    # 获取token和验证token是通过itsdangerous这个库来实现
+    # 生成账户激活的token
+    def generate_activate_token(self, expiration=3600):
+        # 这个函数需要两个参数，一个密匙，从配置文件获取，一个时间，这里1小时
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        # 为ID生成一个加密签名，然后再对数据和签名进行序列化，生成令牌版字符串（就是一长串乱七八糟的东西）,然后返回
+        return s.dumps({'id': self.id})
+
+    # 账户激活（静态方法），所有用户共用此方法？
+    @staticmethod
+    def check_activate_token(token):
+        # 传入和刚才一样的密匙，解码要用
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)   # 解码
+        except:
+            return False
+        u = User.query.get(data['id'])
+        if not u:
+            # 用户已被删除
+            return False
+        if not u.status:
+            u.status = True
+            db.session.add(u)
+            db.session.commit()
+        return True
 
 
 # 图像模型

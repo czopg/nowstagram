@@ -41,7 +41,7 @@ def qiniu_upload_file(source_file, save_file_name):
     # ret, info = put_data(token, save_file_name, source_file.stream)
     # print(type(source_file.stream)): <class 'tempfile.SpooledTemporaryFile'>
 
-    print(type(info.status_code), info)
+    # print(type(info.status_code), info)
     if info.status_code == 200:
         # 七牛云文件的外链域名
         return domain_prefix + save_file_name
