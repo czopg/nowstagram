@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from nowtagram import app
+from nowstagram import app
 from qiniu import Auth, put_data, put_stream, put_file
 import os
 

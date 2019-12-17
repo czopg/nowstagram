@@ -1,6 +1,6 @@
 # -*- encoding=UTF-8 -*-
 
-from nowtagram import db, login_manager
+from nowstagram import db, login_manager
 import random
 from datetime import datetime
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer

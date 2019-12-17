@@ -34,4 +34,4 @@ login_manager.login_message_category = 'info'
 mail = Mail(app)
 
 # 这句需要加，否则出现页面404 not found；需要加在db语句的后面，因为models模块也加载了db，而加载两次db会报错
-from nowtagram import models, views
+from nowstagram import models, views

@@ -1,12 +1,22 @@
 # -*- encoding=UTF-8 -*-
 
-from nowtagram import app, db
+from nowstagram import app, db
 from flask_script import Manager
-from nowtagram.models import User, Image, Comment
-import random
+from nowstagram.models import User, Image, Comment
+import random, unittest
 from sqlalchemy import or_, and_
 
 manager = Manager(app)
+
+
+# 测试脚本命令
+@manager.command
+def run_test():
+    db.drop_all()
+    db.create_all()
+    # 在当前目录查找test开头的单元测试方法
+    tests = unittest.TestLoader().discover('./')
+    unittest.TextTestRunner().run(tests)
 
 
 def get_image_url():

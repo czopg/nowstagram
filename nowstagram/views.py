@@ -1,12 +1,12 @@
 # -*- encoding=UTF-8 -*-
 
-from nowtagram import app, db, mail
+from nowstagram import app, db, mail
 from flask import render_template, redirect, request, flash, get_flashed_messages, send_from_directory, current_app
-from nowtagram.models import User, Image, Comment
+from nowstagram.models import User, Image, Comment
 # 使用md5的加密算法hashlib
 import random, hashlib, json, uuid, os, re
 from flask_login import login_user, logout_user, login_required, current_user
-from nowtagram.qiniusdk import qiniu_upload_file
+from nowstagram.qiniusdk import qiniu_upload_file
 from flask_mail import Message
 from threading import Thread
 
@@ -70,7 +70,7 @@ def image(image_id):
 
 
 # 个人详情页
-@app.route('/profile/<int:user_id>')
+@app.route('/profile/<int:user_id>/')
 @login_required     # 只有登录才能查看
 def profile(user_id):
     user = User.query.get(user_id)
@@ -126,7 +126,13 @@ def reg():
     # request.args是url里的值，request.form是body里的值
     username = request.values.get('username').strip()
     password = request.values.get('password').strip()
-    reg_mail = request.values.get('reg_mail').strip()
+
+    # html的type="email"，在表单提交前，输入框会自动验证输入值是否是一个或多个合法的电子邮箱地址(非空值且符合电子邮箱地址格式)
+    # AttributeError: 'NoneType' object has no attribute 'strip'
+    # reg_mail = request.values.get('reg_mail').strip()
+
+    # 正则表达式之前，转换一下数据类型，两处错误都没有了
+    reg_mail = str(request.values.get('reg_mail')).strip()
 
     if reg_mail == '':
         return redirect_with_msg('/regloginpage/', '邮箱不能为空', category='reglogin')
@@ -138,7 +144,10 @@ def reg():
     regexp = '^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]{2,4}){1,}$'
     # 正则表达式转换为模式对象
     pat = re.compile(regexp)
+
+    # TypeError: expected string or bytes-like object
     isok = pat.match(reg_mail)
+
     if isok is None:
         return redirect_with_msg('/regloginpage/', '邮箱格式错误', category='reglogin')
 
@@ -259,7 +268,7 @@ def upload():
 
 
 # 图片下载显示
-@app.route('/image/<image_name>')
+@app.route('/image/<image_name>/')
 def view_image(image_name):
     # flask里带有此类api，send_from_directory
     return send_from_directory(app.config['UPLOAD_DIR'], image_name)

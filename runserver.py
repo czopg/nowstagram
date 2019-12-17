@@ -1,6 +1,6 @@
 # -*- encoding=UTF-8 -*-
 
-from nowtagram import app
+from nowstagram import app
 
 
 if __name__ == '__main__':
